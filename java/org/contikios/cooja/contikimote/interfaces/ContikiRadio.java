@@ -38,6 +38,7 @@ import org.jdom.Element;
 
 import org.contikios.cooja.COOJARadioPacket;
 import org.contikios.cooja.Mote;
+import org.contikios.cooja.RadioMedium;
 import org.contikios.cooja.RadioPacket;
 import org.contikios.cooja.mote.memory.SectionMoteMemory;
 import org.contikios.cooja.Simulation;
@@ -120,6 +121,281 @@ public class ContikiRadio extends Radio implements ContikiMoteInterface, PolledA
 
   private int oldRadioChannel = -1;
 
+  private boolean dualRadio = false;
+
+  /* second radio - if it exists... */
+  class ContikiRadio2 extends Radio {
+
+    /* Some vars are same - some not */
+    private RadioPacket packetToMote = null;
+    private RadioPacket packetFromMote = null;
+    private boolean radioOn = true;
+    private boolean isTransmitting = false;
+    private boolean isInterfered = false;
+    private int oldRadioChannel = -1;
+    private int oldOutputPowerIndicator = -1;
+    private RadioEvent lastEvent = RadioEvent.UNKNOWN;
+    private long lastEventTime = 0;
+
+    @Override
+    public int getChannel() {
+      return myMoteMemory.getIntValueOf("simRadioChannel2");
+    }
+
+    @Override
+    public RadioPacket getLastPacketReceived() {
+      return packetToMote;
+    }
+  
+    @Override
+    public void setReceivedPacket(RadioPacket packet) {
+      logger.info("ID: " + mote.getID() + " radio2 received packet on channel:" + getChannel());
+      packetToMote = packet;
+    }
+   
+    @Override
+    public RadioPacket getLastPacketTransmitted() {
+      return packetFromMote;
+    }
+
+    @Override
+    public void signalReceptionStart() {
+      packetToMote = null;
+      if (isInterfered() || isReceiving() || isTransmitting()) {
+        interfereAnyReception();
+        return;
+      }
+
+      myMoteMemory.setByteValueOf("simReceiving2", (byte) 1);
+      mote.requestImmediateWakeup();
+
+      lastEventTime = mote.getSimulation().getSimulationTime();
+      lastEvent = RadioEvent.RECEPTION_STARTED;
+
+      myMoteMemory.setInt64ValueOf("simLastPacketTimestamp2", lastEventTime);
+
+      this.setChanged();
+      this.notifyObservers();
+    }
+
+    @Override
+    public void signalReceptionEnd() {
+      if (isInterfered || packetToMote == null) {
+        isInterfered = false;
+        packetToMote = null;
+        myMoteMemory.setIntValueOf("simInSize2", 0);
+      } else {
+        myMoteMemory.setIntValueOf("simInSize2", packetToMote.getPacketData().length - 2);
+        myMoteMemory.setByteArray("simInDataBuffer2", packetToMote.getPacketData());
+      }
+  
+      myMoteMemory.setByteValueOf("simReceiving2", (byte) 0);
+      mote.requestImmediateWakeup();
+      lastEventTime = mote.getSimulation().getSimulationTime();
+      lastEvent = RadioEvent.RECEPTION_FINISHED;
+      this.setChanged();
+      this.notifyObservers();
+    }
+
+    @Override
+    public RadioEvent getLastEvent() {
+      return lastEvent;
+    }
+  
+    @Override
+    public void interfereAnyReception() {
+      if (isInterfered()) {
+        return;
+      }
+   
+      isInterfered = true;
+  
+      lastEvent = RadioEvent.RECEPTION_INTERFERED;
+      lastEventTime = mote.getSimulation().getSimulationTime();
+      this.setChanged();
+      this.notifyObservers();
+    }
+
+    @Override
+    public boolean isTransmitting() {
+      return isTransmitting;
+    }
+
+    @Override
+    public boolean isReceiving() {
+      return myMoteMemory.getByteValueOf("simReceiving2") == 1;
+    }
+
+    @Override
+    public boolean isInterfered() {
+      return isInterfered;
+    }
+
+    @Override
+    public boolean isRadioOn() {
+      return myMoteMemory.getByteValueOf("simRadioHWOn2") == 1;
+    }
+
+    @Override
+    public double getCurrentOutputPower() {
+      // TODO Auto-generated method stub
+      logger.warn("R2 Not implemented, always returning 0 dBm");
+      return 0;
+    }
+
+    @Override
+    public int getOutputPowerIndicatorMax() {
+      return 100;
+    }
+
+    @Override
+    public int getCurrentOutputPowerIndicator() {
+      return myMoteMemory.getByteValueOf("simPower2");
+    }
+
+    @Override
+    public double getCurrentSignalStrength() {
+      return myMoteMemory.getIntValueOf("simSignalStrength2");
+    }
+
+    @Override
+    public void setCurrentSignalStrength(double signalStrength) {
+      myMoteMemory.setIntValueOf("simSignalStrength2", (int) signalStrength);
+    }
+
+    /* Same pos, same mote */
+    @Override
+    public Position getPosition() {
+      return mote.getInterfaces().getPosition();
+    }
+
+    @Override
+    public Mote getMote() {
+      return mote;
+    }
+
+    /* This needs to be called from radio 1 - as this is a "hidden" interface */ 
+    public void doActionsAfterTick() {
+      long now = mote.getSimulation().getSimulationTime();
+  
+      /* Check if radio hardware status changed */
+      if (radioOn != (myMoteMemory.getByteValueOf("simRadioHWOn2") == 1)) {
+        radioOn = !radioOn;
+  
+        if (!radioOn) {
+          myMoteMemory.setByteValueOf("simReceiving2", (byte) 0);
+          myMoteMemory.setIntValueOf("simInSize2", 0);
+          myMoteMemory.setIntValueOf("simOutSize2", 0);
+          isTransmitting = false;
+          lastEvent = RadioEvent.HW_OFF;
+        } else {
+          lastEvent = RadioEvent.HW_ON;
+        }
+  
+        lastEventTime = now;
+        this.setChanged();
+        this.notifyObservers();
+      }
+      if (!radioOn) {
+        return;
+      }
+  
+      /* Check if radio output power changed */
+      if (myMoteMemory.getByteValueOf("simPower2") != oldOutputPowerIndicator) {
+        oldOutputPowerIndicator = myMoteMemory.getByteValueOf("simPower2");
+        lastEvent = RadioEvent.UNKNOWN;
+        this.setChanged();
+        this.notifyObservers();
+      }
+  
+      /* Check if radio channel changed */
+      if (getChannel() != oldRadioChannel) {
+        logger.info("ID: " + mote.getID() + " channel on radio2 changed to " + getChannel());
+        oldRadioChannel = getChannel();
+        lastEvent = RadioEvent.UNKNOWN;
+        this.setChanged();
+        this.notifyObservers();
+      }
+  
+      /* Ongoing transmission */
+      if (isTransmitting && now >= transmissionEndTime) {
+        myMoteMemory.setIntValueOf("simOutSize2", 0);
+        isTransmitting = false;
+        mote.requestImmediateWakeup();
+  
+        lastEventTime = now;
+        lastEvent = RadioEvent.TRANSMISSION_FINISHED;
+        this.setChanged();
+        this.notifyObservers();
+        /*logger.debug("----- CONTIKI TRANSMISSION ENDED -----");*/
+      }
+  
+      /* New transmission */
+      int size = myMoteMemory.getIntValueOf("simOutSize2");
+      if (!isTransmitting && size > 0) {
+        packetFromMote = new COOJARadioPacket(myMoteMemory.getByteArray("simOutDataBuffer2", size + 2));
+  
+        if (packetFromMote.getPacketData() == null || packetFromMote.getPacketData().length == 0) {
+          logger.warn("Skipping zero sized Contiki packet (no buffer)");
+          myMoteMemory.setIntValueOf("simOutSize2", 0);
+          mote.requestImmediateWakeup();
+          return;
+        }
+  
+        byte[] data = packetFromMote.getPacketData();
+        CCITT_CRC txCrc = new CCITT_CRC();
+        txCrc.setCRC(0);
+        for (int i = 0; i < size; i++) {
+          txCrc.addBitrev(data[i]);
+        }
+        data[size] = (byte)txCrc.getCRCHi();
+        data[size + 1] = (byte)txCrc.getCRCLow();
+  
+        isTransmitting = true;
+  
+        logger.info("ID:" + mote.getID() + " sending packet size:" + size + " on channel:" + getChannel());
+
+        /* Calculate transmission duration (us) */
+        /* XXX Currently floored due to millisecond scheduling! */
+        long duration = (int) (Simulation.MILLISECOND*((8 * size /*bits*/) / RADIO_TRANSMISSION_RATE_kbps));
+        transmissionEndTime = now + Math.max(1, duration);
+  
+        lastEventTime = now;
+        lastEvent = RadioEvent.TRANSMISSION_STARTED;
+        this.setChanged();
+        this.notifyObservers();
+        //logger.debug("----- NEW CONTIKI TRANSMISSION DETECTED -----");
+  
+        // Deliver packet right away
+        lastEvent = RadioEvent.PACKET_TRANSMITTED;
+        this.setChanged();
+        this.notifyObservers();
+        //logger.debug("----- CONTIKI PACKET DELIVERED -----");
+      }
+  
+      if (isTransmitting && transmissionEndTime > now) {
+        mote.scheduleNextWakeup(transmissionEndTime);
+      }
+    }  
+
+    @Override
+    public Collection<Element> getConfigXML() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public void setConfigXML(Collection<Element> configXML, boolean visAvailable) {
+      // TODO Auto-generated method stub
+    }
+    
+    public String toString() {
+      return "Radio2 at " + mote;
+    }
+  };
+
+  private ContikiRadio2 radio2;
+
   /**
    * Creates an interface to the radio at mote.
    *
@@ -137,11 +413,23 @@ public class ContikiRadio extends Radio implements ContikiMoteInterface, PolledA
     this.myMoteMemory = new VarMemory(mote.getMemory());
 
     radioOn = myMoteMemory.getByteValueOf("simRadioHWOn") == 1;
+
+    // Add a second radio if there is a variable...
+    if (myMoteMemory.variableExists("simRadioHWOn2")) {
+      radio2 = new ContikiRadio2();
+      logger.info("Setting up second radio!");
+      RadioMedium r = mote.getSimulation().getRadioMedium();
+      logger.info("RadioMedium:" + r.getClass().getCanonicalName());
+      r.registerRadioInterface(radio2, mote.getSimulation());
+
+      dualRadio = true;
+    }
   }
 
   /* Contiki mote interface support */
   public static String[] getCoreInterfaceDependencies() {
-    return new String[] { "radio_interface" };
+    /* Always support for dual radio - but not always used */
+    return new String[] { "radio_interface", "radio_interface2" };
   }
 
   /* Packet radio support */
@@ -154,6 +442,8 @@ public class ContikiRadio extends Radio implements ContikiMoteInterface, PolledA
   }
 
   public void setReceivedPacket(RadioPacket packet) {
+    logger.info("ID: " + mote.getID() + " radio1 received packet on channel:" + getChannel());
+
     packetToMote = packet;
   }
 
@@ -277,6 +567,9 @@ public class ContikiRadio extends Radio implements ContikiMoteInterface, PolledA
   }
 
   public void doActionsAfterTick() {
+    if (radio2 != null) {
+      radio2.doActionsAfterTick();
+    }
     long now = mote.getSimulation().getSimulationTime();
 
     /* Check if radio hardware status changed */
@@ -352,6 +645,8 @@ public class ContikiRadio extends Radio implements ContikiMoteInterface, PolledA
       data[size + 1] = (byte)txCrc.getCRCLow();
 
       isTransmitting = true;
+      
+      logger.info("ID:" + mote.getID() + " sending packet size:" + size + " on channel:" + getChannel());
 
       /* Calculate transmission duration (us) */
       /* XXX Currently floored due to millisecond scheduling! */
