@@ -73,9 +73,9 @@ import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 import javax.swing.filechooser.FileFilter;
 
-import de.sciss.syntaxpane.DefaultSyntaxKit;
-import de.sciss.syntaxpane.actions.DefaultSyntaxAction;
-import de.sciss.syntaxpane.actions.ScriptRunnerAction;
+import jsyntaxpane.DefaultSyntaxKit;
+import jsyntaxpane.actions.DefaultSyntaxAction;
+
 import org.apache.log4j.Logger;
 import org.jdom.Element;
 
@@ -161,7 +161,7 @@ public class ScriptRunner extends VisPlugin {
     fileMenu.add(examplesMenu);
 
     {
-      /* XXX Workaround to configure SyntaxPane */
+      /* XXX Workaround to configure jsyntaxpane */
       JEditorPane e = new JEditorPane();
       new JScrollPane(e);
       e.setContentType("text/javascript");
@@ -169,7 +169,7 @@ public class ScriptRunner extends VisPlugin {
         DefaultSyntaxKit kit = (DefaultSyntaxKit) e.getEditorKit();
         kit.setProperty("PopupMenu", "copy-to-clipboard,-,find,find-next,goto-line,-,linkfile");
         kit.setProperty("Action.linkfile", JSyntaxLinkFile.class.getName());
-        kit.setProperty("Action.execute-script", ScriptRunnerAction.class.getName());
+        kit.setProperty("Action.execute-script", "jsyntaxpane.actions.ScriptRunnerAction");
       }
     }
 

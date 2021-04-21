@@ -35,8 +35,10 @@ import java.io.File;
 
 import javax.swing.Action;
 import javax.swing.JMenuItem;
+import javax.swing.text.JTextComponent;
 
-import de.sciss.syntaxpane.actions.DefaultSyntaxAction;
+import jsyntaxpane.SyntaxDocument;
+import jsyntaxpane.actions.DefaultSyntaxAction;
 
 import org.apache.log4j.Logger;
 

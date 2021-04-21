@@ -51,8 +51,9 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Highlighter;
 import javax.swing.text.Highlighter.HighlightPainter;
 
-import de.sciss.syntaxpane.DefaultSyntaxKit;
-import de.sciss.syntaxpane.components.Markers;
+import jsyntaxpane.DefaultSyntaxKit;
+import jsyntaxpane.components.Markers.SimpleMarker;
+
 import org.apache.log4j.Logger;
 
 import org.contikios.cooja.Watchpoint;
@@ -69,7 +70,7 @@ import org.contikios.cooja.util.StringUtils;
 public class CodeUI extends JPanel {
   private static Logger logger = Logger.getLogger(CodeUI.class);
 
-  static {
+  {
     DefaultSyntaxKit.initKit();
   }
 
@@ -77,9 +78,9 @@ public class CodeUI extends JPanel {
   private HashMap<Integer, Integer> codeEditorLines = null;
   protected File displayedFile = null;
 
-  private static final HighlightPainter CURRENT_LINE_MARKER = new Markers.SimpleMarker(Color.ORANGE);
-  private static final HighlightPainter SELECTED_LINE_MARKER = new Markers.SimpleMarker(Color.GREEN);
-  private static final HighlightPainter BREAKPOINTS_MARKER = new Markers.SimpleMarker(Color.LIGHT_GRAY);
+  private static final HighlightPainter CURRENT_LINE_MARKER = new SimpleMarker(Color.ORANGE);
+  private static final HighlightPainter SELECTED_LINE_MARKER = new SimpleMarker(Color.GREEN);
+  private static final HighlightPainter BREAKPOINTS_MARKER = new SimpleMarker(Color.LIGHT_GRAY);
   private final Object currentLineTag;
   private final Object selectedLineTag;
   private final ArrayList<Object> breakpointsLineTags = new ArrayList<Object>();
