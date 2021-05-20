@@ -77,6 +77,7 @@ public class Simulation extends Observable implements Runnable {
 
   private long lastStartRealTime;
   private long lastStartSimulationTime;
+
   private long currentSimulationTime = 0;
 
   private String title = null;
@@ -220,6 +221,7 @@ public class Simulation extends Observable implements Runnable {
     speedLimitLastSimtime = lastStartSimulationTime;
 
     /* Simulation starting */
+    this.eventCentral.simulationStarted();
     this.setChanged();
     this.notifyObservers(this);
 
@@ -262,10 +264,12 @@ public class Simulation extends Observable implements Runnable {
     		  Cooja.showErrorDialog(Cooja.getTopParentContainer(), title, e, false);
     		}
     	}
+    } finally {
+      isRunning = false;
+      simulationThread = null;
+      stopSimulation = false;
+      this.eventCentral.simulationStopped();
     }
-    isRunning = false;
-    simulationThread = null;
-    stopSimulation = false;
 
     this.setChanged();
     this.notifyObservers(this);
@@ -276,7 +280,8 @@ public class Simulation extends Observable implements Runnable {
    */
   public Simulation(Cooja cooja) {
     this.cooja = cooja;
-    randomGenerator = new SafeRandom(this);
+    this.randomGenerator = new SafeRandom(this);
+    this.eventCentral = new SimEventCentral(this);
   }
 
   /**
@@ -410,7 +415,8 @@ public class Simulation extends Observable implements Runnable {
     this.maxMoteStartupDelay = Math.max(0, maxMoteStartupDelay);
   }
 
-  private final SimEventCentral eventCentral = new SimEventCentral(this);
+  private final SimEventCentral eventCentral;
+
   public SimEventCentral getEventCentral() {
     return eventCentral;
   }
@@ -779,10 +785,12 @@ public class Simulation extends Observable implements Runnable {
    * This method is called just before the simulation is removed.
    */
   public void removed() {
-  	/* Remove radio medium */
-  	if (currentRadioMedium != null) {
-  		currentRadioMedium.removed();
-  	}
+    /* Remove radio medium */
+    if (currentRadioMedium != null) {
+      currentRadioMedium.removed();
+    }
+
+    this.eventCentral.removed();
 
     /* Remove all motes */
     Mote[] motes = getMotes();

@@ -822,6 +822,30 @@ public class Cooja extends Observable {
         return mySimulation != null;
       }
     };
+    final var dataTraceAction = new GUIAction("Save Data Traces", 'd') {
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        if (!(e.getSource() instanceof JCheckBoxMenuItem)) {
+          return;
+        }
+        boolean enabled = ((JCheckBoxMenuItem) e.getSource()).isSelected();
+        mySimulation.getEventCentral().setDataTraceEnabled(enabled);
+      }
+
+      public void setEnabled(boolean newValue) {
+        Simulation s = getSimulation();
+        JCheckBoxMenuItem checkBox = ((JCheckBoxMenuItem)getValue("checkbox"));
+        if (checkBox != null) {
+          checkBox.setSelected(s != null && s.getEventCentral().isDataTraceEnabled());
+        }
+        super.setEnabled(newValue);
+      }
+
+      public boolean shouldBeEnabled() {
+        return mySimulation != null;
+      }
+    };
 
     JMenuItem menuItem;
 
@@ -836,6 +860,7 @@ public class Cooja extends Observable {
     guiActions.add(startStopSimulationAction);
     guiActions.add(removeAllMotesAction);
     guiActions.add(showBufferSettingsAction);
+    guiActions.add(dataTraceAction);
 
     /* Menus */
     JMenuBar menuBar = new JMenuBar();
@@ -1205,6 +1230,9 @@ public class Cooja extends Observable {
     settingsMenu.add(menuItem);
 
     settingsMenu.add(new JMenuItem(showBufferSettingsAction));
+    JCheckBoxMenuItem dtCheckBox = new JCheckBoxMenuItem(dataTraceAction);
+    dataTraceAction.putValue("checkbox", dtCheckBox);
+    settingsMenu.add(dtCheckBox);
 
     /* Help */
     var quickHelpScroll = new JScrollPane(quickHelpTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
