@@ -230,7 +230,7 @@ public class ScriptRunner extends VisPlugin {
       DefaultSyntaxKit kit = (DefaultSyntaxKit) codeEditor.getEditorKit();
       kit.setProperty("PopupMenu", "copy-to-clipboard,-,find,find-next,goto-line,-,linkfile");
       kit.setProperty("Action.linkfile", JSyntaxLinkFile.class.getName());
-      kit.setProperty("Action.execute-script", "jsyntaxpane.actions.ScriptRunnerAction");
+      kit.setProperty("Action.execute-script", ScriptRunnerAction.class.getName());
     }
 
     JPopupMenu p = codeEditor.getComponentPopupMenu();
