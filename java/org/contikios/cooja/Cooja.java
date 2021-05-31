@@ -203,6 +203,11 @@ public class Cooja extends Observable {
   private static String specifiedContikiPath = null;
 
   /**
+   * Custom simulation id for next simulation
+   */
+  private static String nextSimulationName;
+
+  /**
    * Default extension configuration filename.
    */
   public static final String PROJECT_DEFAULT_CONFIG_FILENAME = "/cooja_default.config";
@@ -522,6 +527,14 @@ public class Cooja extends Observable {
     frame.setVisible(true);
   }
 
+  public String getNextSimulationName() {
+    String id = Cooja.nextSimulationName;
+    if (id != null) {
+      Cooja.nextSimulationName = null;
+      return id;
+    }
+    return null;
+  }
 
   /**
    * Add mote highlight observer.
@@ -3002,6 +3015,7 @@ public class Cooja extends Observable {
       externalToolsUserSettingsFile = new File(options.externalToolsConfig);
     }
 
+    nextSimulationName = options.simulationName;
     specifiedContikiPath = options.contikiPath;
     specifiedCoojaPath = options.coojaPath;
 

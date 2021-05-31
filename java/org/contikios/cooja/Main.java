@@ -93,6 +93,12 @@ class Main {
   String externalToolsConfig;
 
   /**
+   * Option for specifying a name for the simulation.
+   */
+  @Option(names = "-simulation-name", paramLabel = "NAME", description = "the name of the simulation")
+  String simulationName;
+
+  /**
    * Option for specifying seed used for simulation.
    */
   @Option(names = "-random-seed", paramLabel = "SEED", description = "the random seed")
