@@ -93,10 +93,10 @@ class Main {
   String externalToolsConfig;
 
   /**
-   * Option for specifying a name for the simulation.
+   * Option for specifying a name for the data trace.
    */
-  @Option(names = "-simulation-name", paramLabel = "NAME", description = "the name of the simulation")
-  String simulationName;
+  @Option(names = "-datatrace", paramLabel = "NAME", description = "the name of the datatrace")
+  String dataTraceName;
 
   /**
    * Option for specifying seed used for simulation.

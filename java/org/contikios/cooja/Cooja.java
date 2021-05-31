@@ -203,9 +203,9 @@ public class Cooja extends Observable {
   private static String specifiedContikiPath = null;
 
   /**
-   * Custom simulation id for next simulation
+   * Name of next data trace
    */
-  private static String nextSimulationName;
+  private static String nextDataTraceName;
 
   /**
    * Default extension configuration filename.
@@ -527,11 +527,11 @@ public class Cooja extends Observable {
     frame.setVisible(true);
   }
 
-  public String getNextSimulationName() {
-    String id = Cooja.nextSimulationName;
-    if (id != null) {
-      Cooja.nextSimulationName = null;
-      return id;
+  public String getNextDataTraceName() {
+    String name = Cooja.nextDataTraceName;
+    if (name != null) {
+      Cooja.nextDataTraceName = null;
+      return name;
     }
     return null;
   }
@@ -3015,7 +3015,7 @@ public class Cooja extends Observable {
       externalToolsUserSettingsFile = new File(options.externalToolsConfig);
     }
 
-    nextSimulationName = options.simulationName;
+    nextDataTraceName = options.dataTraceName;
     specifiedContikiPath = options.contikiPath;
     specifiedCoojaPath = options.coojaPath;
 
