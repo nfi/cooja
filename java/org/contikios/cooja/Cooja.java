@@ -846,6 +846,7 @@ public class Cooja extends Observable {
         mySimulation.getEventCentral().setDataTraceEnabled(enabled);
       }
 
+      @Override
       public void setEnabled(boolean newValue) {
         Simulation s = getSimulation();
         JCheckBoxMenuItem checkBox = ((JCheckBoxMenuItem)getValue("checkbox"));
@@ -855,6 +856,34 @@ public class Cooja extends Observable {
         super.setEnabled(newValue);
       }
 
+      @Override
+      public boolean shouldBeEnabled() {
+        return mySimulation != null;
+      }
+    };
+
+    final var compressDataTraceAction = new GUIAction("Compress Data Traces", 'd') {
+
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        if (!(e.getSource() instanceof JCheckBoxMenuItem)) {
+          return;
+        }
+        boolean enabled = ((JCheckBoxMenuItem) e.getSource()).isSelected();
+        mySimulation.getEventCentral().setDataTraceCompressed(enabled);
+      }
+
+      @Override
+      public void setEnabled(boolean newValue) {
+        Simulation s = getSimulation();
+        JCheckBoxMenuItem checkBox = ((JCheckBoxMenuItem)getValue("checkbox"));
+        if (checkBox != null) {
+          checkBox.setSelected(s != null && s.getEventCentral().isDataTraceCompressed());
+        }
+        super.setEnabled(newValue);
+      }
+
+      @Override
       public boolean shouldBeEnabled() {
         return mySimulation != null;
       }
@@ -874,6 +903,7 @@ public class Cooja extends Observable {
     guiActions.add(removeAllMotesAction);
     guiActions.add(showBufferSettingsAction);
     guiActions.add(dataTraceAction);
+    guiActions.add(compressDataTraceAction);
 
     /* Menus */
     JMenuBar menuBar = new JMenuBar();
@@ -1246,6 +1276,9 @@ public class Cooja extends Observable {
     JCheckBoxMenuItem dtCheckBox = new JCheckBoxMenuItem(dataTraceAction);
     dataTraceAction.putValue("checkbox", dtCheckBox);
     settingsMenu.add(dtCheckBox);
+    JCheckBoxMenuItem compressDtCheckBox = new JCheckBoxMenuItem(compressDataTraceAction);
+    compressDataTraceAction.putValue("checkbox", compressDtCheckBox);
+    settingsMenu.add(compressDtCheckBox);
 
     /* Help */
     var quickHelpScroll = new JScrollPane(quickHelpTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
