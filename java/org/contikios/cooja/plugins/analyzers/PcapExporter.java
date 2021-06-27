@@ -1,14 +1,15 @@
 package org.contikios.cooja.plugins.analyzers;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.File;
-import java.util.zip.GZIPOutputStream;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import java.io.OutputStream;
 
 public class PcapExporter {
+
   private static final Logger logger = LogManager.getLogger(PcapExporter.class);
 
   DataOutputStream out;
@@ -17,26 +18,23 @@ public class PcapExporter {
   }
 
   public void openPcap(File pcapFile) throws IOException {
-    this.openPcap(pcapFile, false);
-  }
-
-  public void openPcap(File pcapFile, boolean compress) throws IOException {
     if (out != null) {
       closePcap();
     }
     if (pcapFile == null) {
       /* pcap file not specified, use default file name */
       String filename = "radiolog-" + System.currentTimeMillis() + ".pcap";
-      if (compress) {
-        filename += ".gz";
-      }
       pcapFile = new File(filename);
     }
-    if (compress) {
-      out = new DataOutputStream(new GZIPOutputStream(new FileOutputStream(pcapFile)));
-    } else {
-      out = new DataOutputStream(new FileOutputStream(pcapFile));
+    setPcapStream(new FileOutputStream(pcapFile));
+    logger.info("Opened pcap file " + pcapFile);
+  }
+
+  public void setPcapStream(OutputStream output) throws IOException {
+    if (out != null) {
+      closePcap();
     }
+    out = new DataOutputStream(output);
 
     /* pcap header */
     out.writeInt(0xa1b2c3d4);
@@ -48,12 +46,13 @@ public class PcapExporter {
     out.writeInt(195); /* 195 for LINKTYPE_IEEE802_15_4 */
 
     out.flush();
-    logger.info("Opened pcap file " + pcapFile);
   }
 
   public void closePcap() throws IOException {
-    out.close();
-    out = null;
+    if (out != null) {
+      out.close();
+      out = null;
+    }
   }
 
   public void exportPacketData(byte[] data, long ts) throws IOException {

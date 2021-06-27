@@ -28,30 +28,19 @@
  */
 
 package org.contikios.cooja.plugins;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
-import static java.nio.file.StandardOpenOption.WRITE;
-
 import de.sciss.syntaxpane.DefaultSyntaxKit;
 import de.sciss.syntaxpane.actions.DefaultSyntaxAction;
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Observable;
-import java.util.Observer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.contikios.cooja.ClassDescription;
+import org.contikios.cooja.Cooja;
+import org.contikios.cooja.Plugin;
+import org.contikios.cooja.PluginType;
+import org.contikios.cooja.Simulation;
+import org.contikios.cooja.VisPlugin;
+import org.contikios.cooja.util.StringUtils;
+import org.jdom.Element;
+
 import javax.script.ScriptException;
 import javax.swing.Action;
 import javax.swing.JCheckBoxMenuItem;
@@ -69,16 +58,27 @@ import javax.swing.JTextArea;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 import javax.swing.filechooser.FileFilter;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.contikios.cooja.ClassDescription;
-import org.contikios.cooja.Cooja;
-import org.contikios.cooja.Plugin;
-import org.contikios.cooja.PluginType;
-import org.contikios.cooja.Simulation;
-import org.contikios.cooja.VisPlugin;
-import org.contikios.cooja.util.StringUtils;
-import org.jdom.Element;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Observable;
+import java.util.Observer;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+import static java.nio.file.StandardOpenOption.WRITE;
 
 @ClassDescription("Simulation script editor")
 @PluginType(PluginType.SIM_CONTROL_PLUGIN)
@@ -100,7 +100,9 @@ public class ScriptRunner implements Plugin {
 
   private boolean activated = false;
 
-  private static BufferedWriter logWriter = null; /* For non-GUI tests */
+  private boolean isLogInitialized = false;
+  private static PrintWriter logWriter = null; /* For non-GUI tests */
+  private static PrintWriter dtWriter = null;
 
   /** The script text when running in headless mode. */
   private String headlessScript = null;
@@ -123,15 +125,22 @@ public class ScriptRunner implements Plugin {
       engine.setScriptLogObserver(new Observer() {
         @Override
         public void update(Observable obs, Object obj) {
-          try {
-            if (logWriter != null) {
-              logWriter.write((String) obj);
-              logWriter.flush();
-            } else {
-              logger.fatal("No log writer: " + obj);
-            }
-          } catch (IOException e) {
-            logger.fatal("Error when writing to test log file: " + obj, e);
+          String text = String.valueOf(obj);
+          if (text.endsWith("\n")) {
+            text = text.substring(0, text.length() - 1);
+          }
+
+          checkLogInit();
+
+          PrintWriter out = dtWriter;
+          if (out != null) {
+            out.println(simulation.getSimulationTime() + "\t" + text);
+          }
+
+          if (logWriter != null) {
+            logWriter.println(text);
+          } else {
+            logger.fatal("No log writer: {}", text);
           }
         }
       });
@@ -169,6 +178,18 @@ public class ScriptRunner implements Plugin {
     engine.setScriptLogObserver(new Observer() {
       @Override
       public void update(Observable obs, Object obj) {
+        String text = String.valueOf(obj);
+        if (text.endsWith("\n")) {
+          text = text.substring(0, text.length() - 1);
+        }
+
+        checkLogInit();
+
+        PrintWriter out = dtWriter;
+        if (out != null) {
+          out.println(simulation.getSimulationTime() + "\t" + text);
+        }
+
         logTextArea.append((String) obj);
         logTextArea.setCaretPosition(logTextArea.getText().length());
       }
@@ -335,14 +356,17 @@ public class ScriptRunner implements Plugin {
     engine.deactivateScript();
 
     if (logWriter != null) {
-      try {
-        logWriter.write("Test ended at simulation time: " + simulation.getSimulationTime() + "\n");
-        logWriter.flush();
-        logWriter.close();
-      } catch (IOException e) {
-      }
+      logWriter.println("Test ended at simulation time: " + simulation.getSimulationTime());
+      logWriter.close();
       logWriter = null;
     }
+
+    if (dtWriter != null) {
+      dtWriter.close();
+      dtWriter = null;
+    }
+
+    this.isLogInitialized = false;
 
     if (Cooja.isVisualized()) {
       if (actionLinkFile != null) {
@@ -366,9 +390,8 @@ public class ScriptRunner implements Plugin {
             Files.createDirectory(logDirPath);
           }
           var logFile = Paths.get(gui.logDirectory, "COOJA.testlog");
-          logWriter = Files.newBufferedWriter(logFile, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING);
-          logWriter.write("Random seed: " + simulation.getRandomSeed() + "\n");
-          logWriter.flush();
+          logWriter = new PrintWriter(Files.newBufferedWriter(logFile, UTF_8, WRITE, CREATE, TRUNCATE_EXISTING), true);
+          logWriter.println("Random seed: " + simulation.getRandomSeed());
         }
       } catch (Exception e) {
         logger.fatal("Create log writer error: ", e);
@@ -400,13 +423,27 @@ public class ScriptRunner implements Plugin {
     }
   }
 
+  private void checkLogInit() {
+    if (this.isLogInitialized) {
+      return;
+    }
+    this.isLogInitialized = true;
+
+    if (dtWriter == null) {
+      dtWriter = simulation.getEventCentral().getSimulationLogWriter("script", "log", "ScriptEngine output");
+      if (dtWriter != null) {
+        dtWriter.println(simulation.getSimulationTime() + "\tRandom seed: " + simulation.getRandomSeed());
+      }
+    }
+  }
+
   private void updateTitle() {
-    String title = "Simulation script editor ";
+    String title = "Simulation script editor";
     if (linkedFile != null) {
-      title += "(" + linkedFile.getName() + ") ";
+      title += " (" + linkedFile.getName() + ")";
     }
     if (isActive()) {
-      title += "*active*";
+      title += " *active*";
     }
     frame.setTitle(title);
   }
@@ -453,7 +490,6 @@ public class ScriptRunner implements Plugin {
   public boolean isActive() {
     return activated;
   }
-
   @Override
   public void closePlugin() {
     deactivateScript();
