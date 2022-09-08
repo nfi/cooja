@@ -1,6 +1,8 @@
 .gradle
 .gradle_home
 *~
+*.pyc
 build
 /dist
 /javadoc
+__pycache__
