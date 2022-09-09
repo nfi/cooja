@@ -132,14 +132,14 @@ public class ScriptRunner implements Plugin {
 
           checkLogInit();
 
-          PrintWriter out = dtWriter;
-          if (out != null) {
-            out.println(simulation.getSimulationTime() + "\t" + text);
+          PrintWriter traceWriter = dtWriter;
+          if (traceWriter != null) {
+            traceWriter.println(simulation.getSimulationTime() + "\t" + text);
           }
 
           if (logWriter != null) {
             logWriter.println(text);
-          } else {
+          } else if (traceWriter == null) {
             logger.fatal("No log writer: {}", text);
           }
         }
@@ -178,15 +178,14 @@ public class ScriptRunner implements Plugin {
     engine.setScriptLogObserver(new Observer() {
       @Override
       public void update(Observable obs, Object obj) {
-        String text = String.valueOf(obj);
-        if (text.endsWith("\n")) {
-          text = text.substring(0, text.length() - 1);
-        }
-
         checkLogInit();
 
         PrintWriter out = dtWriter;
         if (out != null) {
+          String text = String.valueOf(obj);
+          if (text.endsWith("\n")) {
+            text = text.substring(0, text.length() - 1);
+          }
           out.println(simulation.getSimulationTime() + "\t" + text);
         }
 
@@ -380,7 +379,7 @@ public class ScriptRunner implements Plugin {
   private void activateScript() {
     deactivateScript();
     activated = true;
-    if (!Cooja.isVisualized()) {
+    if (!Cooja.isVisualized() && !simulation.getEventCentral().isDataTraceEnabled()) {
       try {
         /* Continuously write test output to file */
         if (logWriter == null) {
