@@ -14,7 +14,6 @@ SELF_PATH = os.path.dirname(os.path.abspath(__file__))
 COOJA_PATH = os.path.dirname(SELF_PATH)
 
 CONTIKI_PATH = os.path.normpath(os.path.join(os.path.dirname(COOJA_PATH), "contiki-ng"))
-cooja_output = 'COOJA.testlog'
 cooja_log = 'COOJA.log'
 
 
@@ -43,9 +42,8 @@ def _remove_file(filename):
 #############################################################
 # Run a single instance of Cooja on a given simulation script
 
-def run_simulation(cooja_file, output_path=None):
+def run_simulation(cooja_file, output_path=None, debug=False):
     # Remove any old simulation logs
-    _remove_file(cooja_output)
     _remove_file(cooja_log)
 
     target_basename = cooja_file
@@ -58,14 +56,15 @@ def run_simulation(cooja_file, output_path=None):
         target_basename = os.path.join(output_path, target_basename)
     target_basename += '-dt-' + simulation_id
     target_basename_fail = target_basename + '-fail'
-    target_output = os.path.join(target_basename, 'cooja.testlog')
+    target_script_output = os.path.join(target_basename, 'script.log')
     target_log_output = os.path.join(target_basename, 'cooja.log')
     print(f'Saving data trace "{target_basename}"')
 
     command = (f'{COOJA_PATH}/gradlew -p {COOJA_PATH} --console=plain run '
                f'--args="-nogui={cooja_file} -contiki={CONTIKI_PATH} '
                f'-datatrace={target_basename} -logdir={os.getcwd()}"')
-    sys.stdout.write(f"  Running Cooja:\n    {command}\n")
+    if debug:
+        sys.stdout.write(f"  Running Cooja:\n    {command}\n")
 
     start_time = time.perf_counter_ns()
     (return_code, output) = _run_command(command)
@@ -75,28 +74,27 @@ def run_simulation(cooja_file, output_path=None):
 
     if not os.path.isdir(target_basename):
         os.mkdir(target_basename)
-    has_cooja_output = os.path.isfile(cooja_output)
-    if has_cooja_output:
-        os.rename(cooja_output, target_output)
+    has_script_output = os.path.isfile(target_script_output)
     os.rename(cooja_log, target_log_output)
 
-    if return_code != 0 or not has_cooja_output:
+    if return_code != 0 or not has_script_output:
         print(f"Failed, ret code={return_code}, output:", file=sys.stderr)
         print("-----", file=sys.stderr)
         print(output, file=sys.stderr, end='')
         print("-----", file=sys.stderr)
-        if not has_cooja_output:
+        if not has_script_output:
             print("No Cooja simulation script output!", file=sys.stderr)
         os.rename(target_basename, target_basename_fail)
         return False
 
-    print("  Checking for output...")
+    if debug:
+        print("  Checking for output...")
 
     is_done = False
-    with open(target_output, "r") as f:
+    with open(target_script_output, "r") as f:
         for line in f.readlines():
-            line = line.strip()
-            if line == "TEST OK":
+            parts = line.strip().split('\t')
+            if len(parts) == 2 and parts[1] == "TEST OK":
                 is_done = True
                 continue
 
@@ -121,6 +119,7 @@ def main(parser=None):
     if not parser:
         parser = argparse.ArgumentParser()
     parser.add_argument('-o', dest='output_path')
+    parser.add_argument('-d', dest='debug', type=bool, default=False)
     parser.add_argument('input', nargs='+')
     try:
         args = parser.parse_args(sys.argv[1:])
@@ -137,7 +136,7 @@ def main(parser=None):
             sys.exit(1)
 
         print(f'Running simulation "{simulation_file}"')
-        if not run_simulation(simulation_file, args.output_path):
+        if not run_simulation(simulation_file, args.output_path, debug=args.debug):
             sys.exit(f'Failed to run simulation "{simulation_file}"')
 
     print('Done. No more simulation files specified.')
