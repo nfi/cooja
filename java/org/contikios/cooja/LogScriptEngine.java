@@ -286,11 +286,7 @@ public class LogScriptEngine {
       while (e.getCause() != null) {
         e = e.getCause();
       }
-      if (e.getMessage() != null && e.getMessage().contains("test script killed") ) {
-        /* Ignore normal shutdown exceptions */
-      } else {
-        logger.error("Uncaught script error:", e);
-      }
+      logger.error("Uncaught script error:", e);
     });
 
     /* Setup simulation observers */
