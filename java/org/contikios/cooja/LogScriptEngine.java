@@ -254,21 +254,7 @@ public class LogScriptEngine {
       logger.fatal("Error when creating engine: " + e.getMessage(), e);
       return false;
     }
-    ThreadGroup group = new ThreadGroup("script") {
-      @Override
-      public void uncaughtException(Thread t, Throwable e) {
-        while (e.getCause() != null) {
-          e = e.getCause();
-        }
-        if (e.getMessage() != null &&
-            e.getMessage().contains("test script killed") ) {
-          /* Ignore normal shutdown exceptions */
-        } else {
-          logger.fatal("Script error:", e);
-        }
-      }
-    };
-    scriptThread = new Thread(group, new Runnable() {
+    scriptThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
@@ -296,6 +282,16 @@ public class LogScriptEngine {
         }
       }
     }, "script");
+    scriptThread.setUncaughtExceptionHandler((t, e) -> {
+      while (e.getCause() != null) {
+        e = e.getCause();
+      }
+      if (e.getMessage() != null && e.getMessage().contains("test script killed") ) {
+        /* Ignore normal shutdown exceptions */
+      } else {
+        logger.error("Uncaught script error:", e);
+      }
+    });
 
     /* Setup simulation observers */
     simulation.getEventCentral().addLogOutputListener(logOutputListener);
