@@ -269,23 +269,14 @@ public class LogScriptEngine {
             logger.debug("Test script finished with result {}", exitException.getExitCode());
           } else {
             logger.fatal("Script error:", e);
-            if (!Cooja.isVisualized()) {
-              logger.fatal("Test script error, terminating Cooja.");
-              simulation.getCooja().doQuit(false, 1);
-            }
-
-            deactivateScript();
-            simulation.stopSimulation();
-            Cooja.showErrorDialog(Cooja.getTopParentContainer(), "Script error", e, false);
+            handleScriptError(e);
           }
         }
       }
     }, "script");
     scriptThread.setUncaughtExceptionHandler((t, e) -> {
-      while (e.getCause() != null) {
-        e = e.getCause();
-      }
       logger.error("Uncaught script error:", e);
+      handleScriptError(e);
     });
 
     /* Setup simulation observers */
@@ -314,6 +305,17 @@ public class LogScriptEngine {
     simulation.scheduleEvent(timeoutProgressEvent, startTime + Math.max(1000, timeout / 20));
     simulation.scheduleEvent(timeoutEvent, startTime + timeout);
     return true;
+  }
+
+  private void handleScriptError(Throwable e) {
+    if (!Cooja.isVisualized()) {
+      logger.fatal("Test script error, terminating Cooja.");
+      simulation.getCooja().doQuit(false, 1);
+    }
+
+    deactivateScript();
+    simulation.stopSimulation();
+    Cooja.showErrorDialog(Cooja.getTopParentContainer(), "Script error", e, false);
   }
 
   private final TimeEvent timeoutEvent = new TimeEvent() {
