@@ -265,9 +265,8 @@ public class LogScriptEngine {
             throwable = throwable.getCause();
           }
 
-          if (throwable.getMessage() != null &&
-              throwable.getMessage().contains("test script killed") ) {
-            logger.debug("Test script finished");
+          if (throwable instanceof ScriptExitException exitException) {
+            logger.debug("Test script finished with result {}", exitException.getExitCode());
           } else {
             logger.fatal("Script error:", e);
             if (!Cooja.isVisualized()) {
@@ -378,7 +377,7 @@ public class LogScriptEngine {
       if (!Cooja.isVisualized()) {
         new Thread(() -> simulation.getCooja().doQuit(false, exitCode), "Cooja.doQuit").start();
       }
-      throw new RuntimeException("test script killed");
+      throw new ScriptExitException(exitCode);
     }
 
     @Override
@@ -405,4 +404,18 @@ public class LogScriptEngine {
           simulation.scheduleEvent(generateEvent, simulation.getSimulationTime() + delay*Simulation.MILLISECOND));
     }
   };
+
+  public static class ScriptExitException extends RuntimeException {
+
+    private final int exitCode;
+
+    public ScriptExitException(int exitCode) {
+      this.exitCode = exitCode;
+    }
+
+    public int getExitCode() {
+      return exitCode;
+    }
+
+  }
 }
