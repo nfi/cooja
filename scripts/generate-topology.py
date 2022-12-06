@@ -19,17 +19,23 @@ def main():
     p.add_argument('-i', dest='input', required=True)
     p.add_argument('-o', dest='output', required=True)
     p.add_argument('-c', dest='count', type=int, default=1)
-    p.add_argument('--generated-seed', dest='generated_seed', action='store_true', default=False)
+    p.add_argument('--seed', dest='seed_policy', type=str, default="r", \
+        help="Set seed policy. 'r' for random seed, 'g' for generated seed, 'f' for fixed seed")
     p.add_argument('--topology', dest='topology', default=None)
     p.add_argument('--min-distance', dest='min_distance', type=int, default=0)
     try:
         args = p.parse_args(sys.argv[1:])
     except Exception as e:
         sys.exit(f"Illegal arguments: {str(e)}")
+    
+    args.seed_policy = args.seed_policy.lower()
+    if args.seed_policy not in ['r', 'g', 'f']:
+        print(f"Seed policy must be one of 'r', 'g', 'f' ({args.seed_policy} was given)")
+        sys.exit("Invalid seed policy")
 
     c = Cooja(args.input)
 
-    if args.generated_seed:
+    if args.seed_policy == 'g':
         # Tell Cooja to generate a new random seed each time simulation runs
         c.sim.random_seed.set_generated()
 
@@ -52,16 +58,11 @@ def main():
         x = y = sx = sy = 0
         motes = []
 
-        if args.count > 1:
-            output_file = f'{os.path.splitext(args.output)[0]}-{i + 1:05}.csc'
-        if os.path.exists(output_file):
-            print(f'Warning: the output file {output_file} already exists - skipping generation')
-            continue
-        print(f'Generating {output_file}')
-
-        if not args.generated_seed:
+        if  args.seed_policy == 'r':
             # Set a new random seed for each new simulation
             c.sim.random_seed.set_seed(random.randint(0, 0x7fffffff))
+        elif args.seed_policy == 'f':
+            c.sim.random_seed.set_seed(i)
 
         for m in c.sim.get_motes():
             if not motes:
