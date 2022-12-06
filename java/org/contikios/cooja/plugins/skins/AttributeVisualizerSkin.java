@@ -125,25 +125,31 @@ public class AttributeVisualizerSkin implements VisualizerSkin {
   }
 
   private static Color parseAttributeColor(String colorString) {
-    if (colorString.equalsIgnoreCase("red")) {
-      return Color.RED;
-    } else if (colorString.equalsIgnoreCase("green")) {
-      return Color.GREEN;
-    } else if (colorString.equalsIgnoreCase("blue")) {
-      return Color.BLUE;
-    } else if (colorString.equalsIgnoreCase("orange")) {
-      return Color.ORANGE;
-    } else if (colorString.equalsIgnoreCase("pink")) {
-      return Color.PINK;
-    } else {
-      try {
-        return Color.decode(colorString);
-      } catch (NumberFormatException e) {
+    switch (colorString.toLowerCase()) {
+      case "black": return Color.black;
+      case "blue": return Color.blue;
+      case "cyan": return Color.cyan;
+      case "darkgray": return Color.darkGray;
+      case "gray": return Color.gray;
+      case "green": return Color.green;
+      case "lightgray": return Color.lightGray;
+      case "magenta": return Color.magenta;
+      case "orange": return Color.orange;
+      case "pink": return Color.pink;
+      case "red": return Color.red;
+      case "white": return Color.white;
+      case "yellow": return Color.yellow;
+      default: {
+        try {
+          return Color.decode(colorString);
+        } catch (NumberFormatException e) {
+          logger.warn("Unknown color attribute: " + colorString);
+          return null;
+        }
       }
-      logger.warn("Unknown color attribute: " + colorString);
-      return null;
     }
   }
+
   @Override
   public void paintBeforeMotes(Graphics g) {
   }
