@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from itertools import product
 import math
 import os
 import random
@@ -23,6 +24,8 @@ def main():
         help="Set seed policy. 'r' for random seed, 'g' for generated seed, 'f' for fixed seed")
     p.add_argument('--topology', dest='topology', default=None)
     p.add_argument('--min-distance', dest='min_distance', type=int, default=0)
+    p.add_argument('--tx_rat', dest='tx_ratio', type=float, default=1.0, nargs='+', help="Transmision ratio of network. Values will be rounded up to 2 digits.")
+    p.add_argument('--rx_rat', dest='rx_ratio', type=float, default=1.0, nargs='+', help="Receive ratio of network. Values will be rounded up to 2 digits.")
     try:
         args = p.parse_args(sys.argv[1:])
     except Exception as e:
@@ -32,6 +35,21 @@ def main():
     if args.seed_policy not in ['r', 'g', 'f']:
         print(f"Seed policy must be one of 'r', 'g', 'f' ({args.seed_policy} was given)")
         sys.exit("Invalid seed policy")
+    
+    if type(args.tx_ratio) == float:
+        args.tx_ratio = [args.tx_ratio]
+    if type(args.rx_ratio) == float:
+        args.rx_ratio = [args.rx_ratio]
+    
+    if min(args.tx_ratio) < 0.0 or max(args.tx_ratio) > 1.0:
+        print(f'Tx ratio must be between 0.0 and 1.0 ({args.tx_ratio} was given)')
+        sys.exit("Invalid Tx ratio")
+    if min(args.rx_ratio) < 0.0 or max(args.rx_ratio) > 1.0:
+        print(f'Rx ratio must be between 0.0 and 1.0 ({args.rx_ratio} was given)')
+        sys.exit("Invalid Rx ratio")
+        
+    args.tx_ratio = [round(t, 2) for t in args.tx_ratio]
+    args.rx_ratio = [round(r, 2) for r in args.rx_ratio]
 
     c = Cooja(args.input)
 
@@ -53,7 +71,7 @@ def main():
         promote_multihop = False
 
     output_file = args.output
-
+    
     for i in range(0, args.count):
         x = y = sx = sy = 0
         motes = []
@@ -97,7 +115,18 @@ def main():
                 motes.append(m)
                 print(f"setting position for mote {m.mote_id:>3} to {m.position.x:20.15f},{m.position.y:20.15f}")
 
-        c.save(output_file)
+        for t_rat, r_rat in product(args.tx_ratio, args.rx_ratio):
+            radio_medium.success_ratio_tx = t_rat
+            radio_medium.success_ratio_rx = r_rat
+    
+            output_file = os.path.splitext(args.output)[0]
+            if len(args.rx_ratio) != 1 or len(args.tx_ratio) != 1:
+                output_file += f'-tx{t_rat:.2f}-rx{r_rat:.2f}'
+            if args.count > 1:
+                output_file += f'-{i + 1:05}'
+            output_file += '.csc'
+            print(f'Generated {output_file}')
+            c.save(output_file)
 
 
 if __name__ == '__main__':
