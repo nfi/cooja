@@ -32,6 +32,8 @@ package org.contikios.cooja;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 import org.jdom.Element;
@@ -96,6 +98,16 @@ public abstract class RadioMedium {
    *          Simulation holding radio
    */
   public abstract void unregisterRadioInterface(Radio radio, Simulation sim);
+
+  /**
+   * Get the list of radios within transmission range of specified radio interface.
+   *
+   * @param radio A radio interface whose neighbours are requested.
+   * @Returns the list of radios within transmission range.
+   */
+  public List<Radio> getNeighbours(Radio radio) {
+    return Collections.emptyList();
+  }
 
   /**
    * Adds an observer which is notified each time a radio connection has finished.
