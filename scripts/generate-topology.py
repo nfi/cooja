@@ -50,7 +50,9 @@ def main():
         
     args.tx_ratio = [round(t, 2) for t in args.tx_ratio]
     args.rx_ratio = [round(r, 2) for r in args.rx_ratio]
-
+    output_dir = os.path.dirname(args.output) if os.path.splitext(args.output) != '' else args.output
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
     c = Cooja(args.input)
 
     if args.seed_policy == 'g':
