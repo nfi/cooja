@@ -31,6 +31,16 @@ constraint that nodes should be at least 40 meters from each other.
 ./generate-topology.py -c 20 -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o generated/test.csc --min-distance 40
 ```
 
+Example generating simulations with different random seed policy
+```
+./generate-topology.py -c 20 -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o generated/test.csc --seed f
+```
+
+Example generating simulations of fixed topology while different transmission/receive ratios
+```
+./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o generated/test.csc --tx_rat 0.9 --rx_rat 0.7 0.85 0.95
+```
+
 ### Scripts to batch run Cooja without GUI
 
 Example running Cooja on all simulations in a folder to generate data traces. The simulations must contain a control
