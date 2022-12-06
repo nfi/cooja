@@ -16,29 +16,29 @@ sim.getEventCentral().logEvent("network", "steady-state");
 Example generating a new simulation with randomized topology that is spread around
 a sink node:
 ```
-./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o test.csc --topology spread
+./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o ../../../applications/rpl-udp-ids/generated/test.csc --topology spread
 ```
 
 Example generating a new simulation with randomized topology that is
 somewhat biased for more multihop:
 ```
-./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o test.csc
+./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o ../../../applications/rpl-udp-ids/generated/test.csc
 ```
 
 Example generating 20 new simulations with randomized topology with extra
 constraint that nodes should be at least 40 meters from each other.
 ```
-./generate-topology.py -c 20 -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o generated/test.csc --min-distance 40
+./generate-topology.py -c 20 -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o ../../../applications/rpl-udp-ids/generated/test.csc --min-distance 40
 ```
 
 Example generating simulations with different random seed policy
 ```
-./generate-topology.py -c 20 -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o generated/test.csc --seed f
+./generate-topology.py -c 20 -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o ../../../applications/rpl-udp-ids/generated/test.csc --seed f
 ```
 
 Example generating simulations of fixed topology while different transmission/receive ratios
 ```
-./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o generated/test.csc --tx_rat 0.9 --rx_rat 0.7 0.85 0.95
+./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o ../../../applications/rpl-udp-ids/generated/test.csc --tx_rat 0.9 --rx_rat 0.85 0.95
 ```
 
 ### Scripts to batch run Cooja without GUI
@@ -48,7 +48,7 @@ script that ensures the simulation finishes after some time and does not run for
 run the simulation.
 
 ```
-./run-cooja.py generated/*.csc
+./run-cooja.py ../../../applications/rpl-udp-ids/generated/*.csc
 ```
 
 ### Python library to parse Cooja data traces
@@ -56,7 +56,7 @@ run the simulation.
 Example reading a data trace and show a summary.
 
 ```
-./coojatrace.py -s generated/test-00001-dt-*
+./coojatrace.py -s ../../../applications/rpl-udp-ids/generated/test-*-dt-*
 ```
 
 Example script extracting some RPL statistics from a data trace. The features will be saved as a CSV file inside
