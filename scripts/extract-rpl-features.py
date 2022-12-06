@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-import argparse
 import csv
-import glob
 import re
 import sys
 
 import coojatrace
 from humanfriendly.tables import format_pretty_table
-import subprocess
 
 def write_csv(trace, csv_file, columns, data):
     if trace.is_file(csv_file):
@@ -21,31 +18,7 @@ def write_csv(trace, csv_file, columns, data):
 
 
 def main():
-    # from plot import plot
-    # import os
-    
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-s', action='store_true', dest='summary', default=False)
-    # parser.add_argument('input', type=str, nargs="+")
-
-    
-    # try:
-    #     conopts = parser.parse_args()
-    # except Exception as e:
-    #     sys.exit(f"Illegal arguments: {str(e)}")
-    # print(conopts.input)
-    # import sys
-    # if sys.platform.startswith("win") and "*" in conopts.input:
-    #     conopts.input = glob.glob(conopts.input)
-    
-    # if not isinstance(conopts.input, list):
-    #     conopts.input = [i for i in conopts.input]
-    # conopts.input = [i for i in conopts.input if os.path.isdir(i)]
-    
-    
-    # for input in conopts.input:
-        
-    trace, simulation_logdir = coojatrace.main()
+    trace = coojatrace.main()
 
     network_events = trace.get_events(event_type='network', description='steady-state')
     network_stable_time = network_events[0].time if network_events else 0
@@ -53,8 +26,6 @@ def main():
     network_script = trace.get_script(description='attack')
     network_attck_time = network_script[0].time if network_script else 0
 
-    # network_stable_time = 0 # From the start
-    trace.get_events()
     motes = {}
     data = []
     p = re.compile(r'.*DATA: (.+)$')
@@ -94,19 +65,8 @@ def main():
         print(f"Only showing 20 first rows - remaining {len(data) - 20} rows not shown.")
 
     # Save statistics to CSV file
-    csv_name = 'rpl-statistics.csv'
-    write_csv(trace, csv_name, column_names, data)
-    
-    
-    m = re.search(r'udp-\d+.*$', simulation_logdir)
-    # sim_name = m.group()
-    
-    # plot(os.path.join(simulation_logdir, csv_name), sim_name)
+    write_csv(trace, 'rpl-statistics.csv', column_names, data)
 
 
 if __name__ == '__main__':
     main()
-    
-    
-    
-    
