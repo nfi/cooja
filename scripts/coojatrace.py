@@ -88,6 +88,18 @@ class Script:
         self.description = data[1]
 
 
+class Script:
+    time = None
+    description = None
+
+    def __init__(self, line):
+        data = line.split('\t', 1)
+        if len(data) < 2:
+            raise coojautils.ParseException("Failed to parse event data")
+        self.time = int(data[0])
+        self.description = data[1]
+
+
 class CoojaTrace:
     motes = None
     events = None
