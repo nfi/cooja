@@ -76,6 +76,7 @@ class RadioTransmission:
         self.interferedNoneDestinations = data[6]
         self.data = data[7]
 
+
 class Script:
     time = None
     description = None
