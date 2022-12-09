@@ -53,13 +53,13 @@ def main():
                 row = row + ['Start']
 
             data.append(row)
-    
+
     # Print 20 first values
     column_names = ['Time', 'Mote',
                     'Seq', 'Rank', 'Version',
                     'DIS-UR', 'DIS-MR', 'DIS-US', 'DIS-MS',
                     'DIO-UR', 'DIO-MR', 'DIO-US', 'DIO-MS',
-                    'DAO-R', 'DAO-S', 'DAOA-R', 'DAOA-S', 'dio_intcurrent','dio_counter',
+                    'DAO-R', 'DAO-S', 'DAOA-R', 'DAOA-S', 'dio_intcurrent', 'dio_counter',
                     'Attack']
     print(format_pretty_table(data[:20], column_names))
     if len(data) > 20:

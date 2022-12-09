@@ -185,7 +185,7 @@ class CoojaTrace:
         if description:
             output = [e for e in output if description in e.description]
         return output
-        
+
     def get_mote_output(self, regex=None, start_time=None, end_time=None):
         output = list(self.mote_output)
         if start_time is not None:
