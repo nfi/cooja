@@ -38,7 +38,7 @@ Example generating simulations with different random seed policy
 
 Example generating simulations of fixed topology while different transmission/receive ratios
 ```
-./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o ../../../applications/rpl-udp-ids/generated/test.csc --tx_rat 0.9 --rx_rat 0.85 0.95
+./generate-topology.py -i ../../../applications/rpl-udp-ids/simulations/rpl-udp-base-15-attack-blackhole-random.csc -o ../../../applications/rpl-udp-ids/generated/test.csc --tx-ratio 0.9 --rx-ratio 0.85 0.95
 ```
 
 ### Scripts to batch run Cooja without GUI
