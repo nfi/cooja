@@ -20,37 +20,31 @@ def main():
     p.add_argument('-i', dest='input', required=True)
     p.add_argument('-o', dest='output', required=True)
     p.add_argument('-c', dest='count', type=int, default=1)
-    p.add_argument('--seed', dest='seed_policy', type=str, default="r", \
-        help="Set seed policy. 'r' for random seed, 'g' for generated seed, 'f' for fixed seed")
+    p.add_argument('--seed', dest='seed_policy', choices=['r', 'g', 'f'], default='r',
+                   help="Set seed policy. 'r' for random seed, 'g' for generated seed, 'f' for fixed seed")
     p.add_argument('--topology', dest='topology', default=None)
     p.add_argument('--min-distance', dest='min_distance', type=int, default=0)
-    p.add_argument('--tx_rat', dest='tx_ratio', type=float, default=1.0, nargs='+', help="Transmision ratio of network. Values will be rounded up to 2 digits.")
-    p.add_argument('--rx_rat', dest='rx_ratio', type=float, default=1.0, nargs='+', help="Receive ratio of network. Values will be rounded up to 2 digits.")
+    p.add_argument('--tx-ratio', dest='tx_ratio', type=float, default=[1.0], nargs='+',
+                   help="Transmission ratio of network. Values will be rounded up to 2 digits.")
+    p.add_argument('--rx-ratio', dest='rx_ratio', type=float, default=[1.0], nargs='+',
+                   help="Receive ratio of network. Values will be rounded up to 2 digits.")
     try:
         args = p.parse_args(sys.argv[1:])
     except Exception as e:
         sys.exit(f"Illegal arguments: {str(e)}")
-    
-    args.seed_policy = args.seed_policy.lower()
-    if args.seed_policy not in ['r', 'g', 'f']:
-        print(f"Seed policy must be one of 'r', 'g', 'f' ({args.seed_policy} was given)")
-        sys.exit("Invalid seed policy")
-    
-    if type(args.tx_ratio) == float:
-        args.tx_ratio = [args.tx_ratio]
-    if type(args.rx_ratio) == float:
-        args.rx_ratio = [args.rx_ratio]
-    
+
     if min(args.tx_ratio) < 0.0 or max(args.tx_ratio) > 1.0:
         print(f'Tx ratio must be between 0.0 and 1.0 ({args.tx_ratio} was given)')
         sys.exit("Invalid Tx ratio")
     if min(args.rx_ratio) < 0.0 or max(args.rx_ratio) > 1.0:
         print(f'Rx ratio must be between 0.0 and 1.0 ({args.rx_ratio} was given)')
         sys.exit("Invalid Rx ratio")
-        
+
     args.tx_ratio = [round(t, 2) for t in args.tx_ratio]
     args.rx_ratio = [round(r, 2) for r in args.rx_ratio]
-
+    output_dir = os.path.dirname(args.output) if os.path.splitext(args.output) != '' else args.output
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
     c = Cooja(args.input)
 
     if args.seed_policy == 'g':
@@ -63,20 +57,18 @@ def main():
     print(f"Using tx range {tx_range} meters with max multihop range of {max_range} meters.")
 
     if args.min_distance > 0 and args.min_distance >= tx_range:
-        print(f'Minimal distance between nodes is too large for communication range')
+        print('Minimal distance between nodes is too large for communication range')
         sys.exit("Too large minimal distance")
 
     promote_multihop = True
     if args.topology == 'spread':
         promote_multihop = False
 
-    output_file = args.output
-    
     for i in range(0, args.count):
         x = y = sx = sy = 0
         motes = []
 
-        if  args.seed_policy == 'r':
+        if args.seed_policy == 'r':
             # Set a new random seed for each new simulation
             c.sim.random_seed.set_seed(random.randint(0, 0x7fffffff))
         elif args.seed_policy == 'f':
@@ -118,7 +110,7 @@ def main():
         for t_rat, r_rat in product(args.tx_ratio, args.rx_ratio):
             radio_medium.success_ratio_tx = t_rat
             radio_medium.success_ratio_rx = r_rat
-    
+
             output_file = os.path.splitext(args.output)[0]
             if len(args.rx_ratio) != 1 or len(args.tx_ratio) != 1:
                 output_file += f'-tx{t_rat:.2f}-rx{r_rat:.2f}'
