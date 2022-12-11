@@ -87,6 +87,7 @@ public class ContikiEEPROM implements MoteInterface, PolledAfterActiveTicks {
   private final VarMemory moteMem;
   private int lastRead = 0;
   private int lastWritten = 0;
+  private long lastWrittenTime;
   private final LinkedHashMap<JPanel, Updates> labels = new LinkedHashMap<>();
 
   /**
@@ -106,17 +107,14 @@ public class ContikiEEPROM implements MoteInterface, PolledAfterActiveTicks {
     if (moteMem.getByteValueOf("simEEPROMChanged") == 1) {
       lastRead = moteMem.getIntValueOf("simEEPROMRead");
       lastWritten = moteMem.getIntValueOf("simEEPROMWritten");
+      lastWrittenTime = mote.getSimulation().getSimulationTime();
       moteMem.setIntValueOf("simEEPROMRead", 0);
       moteMem.setIntValueOf("simEEPROMWritten", 0);
       moteMem.setByteValueOf("simEEPROMChanged", (byte) 0);
       if (Cooja.isVisualized()) {
-        final var currentTime = mote.getSimulation().getSimulationTime();
         EventQueue.invokeLater(() -> {
           for (var updates : labels.values()) {
-            updates.lastTimeLabel.setText("Last change at time: " + currentTime);
-            updates.lastReadLabel.setText("Last change read bytes: " + getLastReadCount());
-            updates.lastWrittenLabel.setText("Last change wrote bytes: " + getLastWrittenCount());
-            redrawDataView(updates.dataArea);
+            redrawDataView(updates);
           }
         });
       }
@@ -187,16 +185,20 @@ public class ContikiEEPROM implements MoteInterface, PolledAfterActiveTicks {
       return sb.toString();
   }
   
-  void redrawDataView(JTextArea textArea) {
+  void redrawDataView(Updates updates) {
       StringBuilder sb = new StringBuilder();
       Formatter fmt = new Formatter(sb);
       byte[] data = getEEPROMData();
-      
+
+      updates.lastTimeLabel.setText("Last change at time: " + (lastWrittenTime == 0 ? "?" : String.valueOf(lastWrittenTime)));
+      updates.lastReadLabel.setText("Last change read bytes: " + getLastReadCount());
+      updates.lastWrittenLabel.setText("Last change wrote bytes: " + getLastWrittenCount());
+
       for (int i = 0; i < EEPROM_SIZE; i += 16) {
           fmt.format("%04d  %s | %s |\n", i, byteArrayToHexList(data, i, 16), byteArrayToPrintableCharacters(data, i, 16));
       }
-      textArea.setText(sb.toString());
-      textArea.setCaretPosition(0);
+      updates.dataArea.setText(sb.toString());
+      updates.dataArea.setCaretPosition(0);
   }
   
   @Override
@@ -204,17 +206,14 @@ public class ContikiEEPROM implements MoteInterface, PolledAfterActiveTicks {
     JPanel panel = new JPanel();
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-    var lastTimeLabel = new JLabel("Last change at: ?");
-    var lastReadLabel = new JLabel("Last change read bytes: 0");
-    var lastWrittenLabel = new JLabel("Last change wrote bytes: 0");
+    var updates = new Updates(new JLabel(), new JLabel(), new JLabel(), new JTextArea());
     final JButton uploadButton = new JButton("Upload binary file");
     final JButton clearButton = new JButton("Reset EEPROM to zero");
-    var dataViewArea = new JTextArea();
-    final JScrollPane dataViewScrollPane = new JScrollPane(dataViewArea);
+    final JScrollPane dataViewScrollPane = new JScrollPane(updates.dataArea);
     
-    panel.add(lastTimeLabel);
-    panel.add(lastReadLabel);
-    panel.add(lastWrittenLabel);
+    panel.add(updates.lastTimeLabel);
+    panel.add(updates.lastReadLabel);
+    panel.add(updates.lastWrittenLabel);
     panel.add(uploadButton);
     panel.add(clearButton);
     
@@ -232,7 +231,7 @@ public class ContikiEEPROM implements MoteInterface, PolledAfterActiveTicks {
                                           "Error uploading EEPROM data", JOptionPane.ERROR_MESSAGE);
           } else if (setEEPROMData(eepromData)) {
             logger.info("Done! (" + eepromData.length + " bytes written to EEPROM)");
-            redrawDataView(dataViewArea);
+            redrawDataView(updates);
           } else {
             JOptionPane.showMessageDialog(uploadButton, "Failed to upload EEPROM data to mote",
                                           "Error uploading EEPROM data", JOptionPane.ERROR_MESSAGE);
@@ -251,19 +250,19 @@ public class ContikiEEPROM implements MoteInterface, PolledAfterActiveTicks {
       if (setEEPROMData(eepromData)) {
           logger.info("Done! (EEPROM reset to zero)");
       }
-      redrawDataView(dataViewArea);
+      redrawDataView(updates);
     });
 
     panel.setMinimumSize(new Dimension(140, 60));
     panel.setPreferredSize(new Dimension(140, 60));
 
-    dataViewArea.setLineWrap(false);
-    dataViewArea.setEditable(false);
-    dataViewArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+    updates.dataArea.setLineWrap(false);
+    updates.dataArea.setEditable(false);
+    updates.dataArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
     dataViewScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
     dataViewScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-    redrawDataView(dataViewArea);
-    labels.put(panel, new Updates(lastTimeLabel, lastReadLabel, lastWrittenLabel, dataViewArea));
+    redrawDataView(updates);
+    labels.put(panel, updates);
     return panel;
   }
 
