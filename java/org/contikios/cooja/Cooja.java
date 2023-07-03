@@ -146,7 +146,7 @@ public class Cooja {
 
   private ArrayList<Class<? extends MoteType>> moteTypeClasses;
 
-  private ArrayList<Class<? extends Plugin>> pluginClasses;
+  private final ArrayList<Class<? extends Plugin>> pluginClasses = new ArrayList<>();
 
   private ArrayList<Class<? extends RadioMedium>> radioMediumClasses;
 
@@ -299,7 +299,7 @@ public class Cooja {
    * Returns all registered plugins.
    */
   public List<Class<? extends Plugin>> getRegisteredPlugins() {
-    return Objects.requireNonNullElseGet(pluginClasses, () -> List.copyOf(ExtensionManager.builtinPlugins.values()));
+    return pluginClasses;
   }
 
   /**
@@ -344,7 +344,7 @@ public class Cooja {
   void clearProjectConfig() {
     /* Remove current dependencies */
     moteTypeClasses = null;
-    pluginClasses = null;
+    pluginClasses.clear();
     positionerClasses = null;
     radioMediumClasses = null;
     projectDirClassLoader = null;
@@ -368,23 +368,19 @@ public class Cooja {
     }
 
     // Register plugins.
-    var pluginClassNames = projectConfig.getStringArrayValue(Cooja.class, "PLUGINS");
-    if (gui != null) {
-      for (var pluginClass : ExtensionManager.builtinPlugins.values()) {
-        if (pluginClass.getAnnotation(PluginType.class).value() == PluginType.PType.MOTE_PLUGIN) {
-          gui.menuMotePluginClasses.add(pluginClass);
-        }
-      }
+    pluginClasses.clear();
+    pluginClasses.addAll(ExtensionManager.builtinPlugins.values());
+    for (var pluginClass : pluginClasses) {
+      registerPlugin(pluginClass);
     }
-    if (pluginClassNames != null) {
-      pluginClasses = new ArrayList<>(ExtensionManager.builtinPlugins.values());
-      for (var pluginClassName : pluginClassNames) {
-        var pluginClass = tryLoadClass(this, Plugin.class, pluginClassName);
-        if (pluginClass != null) {
-          registerPlugin(pluginClass);
-        } else {
-          logger.error("Could not load plugin class: " + pluginClassName);
-        }
+
+    // Register project plugins.
+    for (var pluginClassName : projectConfig.getStringArrayValue(Cooja.class, "PLUGINS")) {
+      var pluginClass = tryLoadClass(this, Plugin.class, pluginClassName);
+      if (pluginClass != null) {
+        registerPlugin(pluginClass);
+      } else {
+        logger.error("Could not load plugin class: " + pluginClassName);
       }
     }
 
@@ -563,8 +559,7 @@ public class Cooja {
       if (pluginType != PluginType.PType.COOJA_PLUGIN && pluginType != PluginType.PType.COOJA_STANDARD_PLUGIN && sim == null) {
         throw new PluginConstructionException("No simulation argument for plugin: " + pluginClass.getName());
       }
-      if (!Objects.requireNonNullElseGet(pluginClasses, () ->
-              List.copyOf(ExtensionManager.builtinPlugins.values())).contains(pluginClass)) {
+      if (!pluginClasses.contains(pluginClass)) {
         throw new PluginConstructionException("Tool class not registered: " + pluginClass.getName());
       }
       return startPlugin(pluginClass, sim, mote, null);
@@ -723,12 +718,7 @@ public class Cooja {
    * @param pluginClass Plugin class
    */
   public void unregisterPlugin(Class<? extends Plugin> pluginClass) {
-    if (pluginClasses != null) {
-      pluginClasses.remove(pluginClass);
-      if (pluginClasses.isEmpty()) {
-        pluginClasses = null;
-      }
-    }
+    pluginClasses.remove(pluginClass);
     if (gui != null) {
       gui.menuMotePluginClasses.remove(pluginClass);
     }
@@ -757,8 +747,7 @@ public class Cooja {
       case SIM_PLUGIN:
       case SIM_STANDARD_PLUGIN:
       case SIM_CONTROL_PLUGIN:
-        Objects.requireNonNullElseGet(pluginClasses,
-                () -> pluginClasses = new ArrayList<>(ExtensionManager.builtinPlugins.values())).add(pluginClass);
+        pluginClasses.add(pluginClass);
         return true;
     }
     logger.error("Could not register plugin, " + pluginClass + " has unknown plugin type");
