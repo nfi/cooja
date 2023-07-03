@@ -148,7 +148,7 @@ public class Cooja {
 
   private final ArrayList<Class<? extends Plugin>> pluginClasses = new ArrayList<>();
 
-  private ArrayList<Class<? extends RadioMedium>> radioMediumClasses;
+  private final ArrayList<Class<? extends RadioMedium>> radioMediumClasses = new ArrayList<>();
 
   private ArrayList<Class<? extends Positioner>> positionerClasses;
 
@@ -330,15 +330,14 @@ public class Cooja {
    * @param radioMediumClass Class to register
    */
   public void registerRadioMedium(Class<? extends RadioMedium> radioMediumClass) {
-    Objects.requireNonNullElseGet(radioMediumClasses, () ->
-            radioMediumClasses = new ArrayList<>(ExtensionManager.builtinRadioMediums.values())).add(radioMediumClass);
+    radioMediumClasses.add(radioMediumClass);
   }
 
   /**
    * @return All registered radio medium classes
    */
   public List<Class<? extends RadioMedium>> getRegisteredRadioMediums() {
-    return Objects.requireNonNullElseGet(radioMediumClasses, () -> List.copyOf(ExtensionManager.builtinRadioMediums.values()));
+    return radioMediumClasses;
   }
 
   void clearProjectConfig() {
@@ -346,7 +345,7 @@ public class Cooja {
     moteTypeClasses = null;
     pluginClasses.clear();
     positionerClasses = null;
-    radioMediumClasses = null;
+    radioMediumClasses.clear();
     projectDirClassLoader = null;
   }
 
@@ -385,16 +384,17 @@ public class Cooja {
     }
 
     // Register radio mediums.
-    var radioMediumsClassNames = projectConfig.getStringArrayValue(Cooja.class, "RADIOMEDIUMS");
-    if (radioMediumsClassNames != null) {
-      radioMediumClasses = new ArrayList<>(ExtensionManager.builtinRadioMediums.values());
-      for (var radioMediumClassName : radioMediumsClassNames) {
-        var radioMediumClass = tryLoadClass(this, RadioMedium.class, radioMediumClassName);
-        if (radioMediumClass != null) {
-          registerRadioMedium(radioMediumClass);
-        } else {
-          logger.error("Could not load radio medium class: " + radioMediumClassName);
-        }
+    radioMediumClasses.clear();
+    radioMediumClasses.addAll(ExtensionManager.builtinRadioMediums.values());
+    for (var radioMediumClass : radioMediumClasses) {
+      registerRadioMedium(radioMediumClass);
+    }
+    for (var radioMediumClassName : projectConfig.getStringArrayValue(Cooja.class, "RADIOMEDIUMS")) {
+      var radioMediumClass = tryLoadClass(this, RadioMedium.class, radioMediumClassName);
+      if (radioMediumClass != null) {
+        registerRadioMedium(radioMediumClass);
+      } else {
+        logger.error("Could not load radio medium class: " + radioMediumClassName);
       }
     }
 
