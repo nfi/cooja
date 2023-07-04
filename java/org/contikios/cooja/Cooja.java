@@ -45,7 +45,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
@@ -144,13 +143,13 @@ public class Cooja {
 
   private ClassLoader projectDirClassLoader;
 
-  private ArrayList<Class<? extends MoteType>> moteTypeClasses;
+  private final ArrayList<Class<? extends MoteType>> moteTypeClasses = new ArrayList<>();
 
   private final ArrayList<Class<? extends Plugin>> pluginClasses = new ArrayList<>();
 
   private final ArrayList<Class<? extends RadioMedium>> radioMediumClasses = new ArrayList<>();
 
-  private ArrayList<Class<? extends Positioner>> positionerClasses;
+  private final ArrayList<Class<? extends Positioner>> positionerClasses = new ArrayList<>();
 
   /**
    * Creates a new Cooja Simulator GUI and ensures Swing initialization is done in the right thread.
@@ -222,7 +221,7 @@ public class Cooja {
         }
       }
     } else {
-      parseProjectConfig(false);
+      parseProjectConfig();
     }
     // Shutdown hook to stop running simulations.
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -279,9 +278,6 @@ public class Cooja {
    *          Class to register
    */
   public void registerMoteType(Class<? extends MoteType> moteTypeClass) {
-    if (moteTypeClasses == null) {
-      registerClasses();
-    }
     moteTypeClasses.add(moteTypeClass);
   }
 
@@ -289,9 +285,6 @@ public class Cooja {
    * @return All registered mote type classes
    */
   public List<Class<? extends MoteType>> getRegisteredMoteTypes() {
-    if (moteTypeClasses == null) {
-      registerClasses();
-    }
     return moteTypeClasses;
   }
 
@@ -308,9 +301,6 @@ public class Cooja {
    * @param positionerClass Class to register
    */
   public void registerPositioner(Class<? extends Positioner> positionerClass) {
-    if (positionerClasses == null) {
-      registerClasses();
-    }
     positionerClasses.add(positionerClass);
   }
 
@@ -318,9 +308,6 @@ public class Cooja {
    * @return All registered positioner classes
    */
   public List<Class<? extends Positioner>> getRegisteredPositioners() {
-    if (positionerClasses == null) {
-      registerClasses();
-    }
     return positionerClasses;
   }
 
@@ -340,20 +327,14 @@ public class Cooja {
     return radioMediumClasses;
   }
 
-  void clearProjectConfig() {
-    /* Remove current dependencies */
-    moteTypeClasses = null;
-    pluginClasses.clear();
-    positionerClasses = null;
-    radioMediumClasses.clear();
-    projectDirClassLoader = null;
-  }
-
   /**
    * Builds extension configuration using extension directories settings.
    * Registers mote types, plugins, positioners and radio mediums.
    */
-  void parseProjectConfig(boolean eagerInit) throws ParseProjectsException {
+  void parseProjectConfig() throws ParseProjectsException {
+    /* Remove current dependencies */
+    projectDirClassLoader = null;
+
     /* Build cooja configuration */
     projectConfig = new ProjectConfig(true);
     for (COOJAProject project: currentProjects) {
@@ -398,49 +379,34 @@ public class Cooja {
       }
     }
 
-    if (eagerInit) {
-      registerClasses();
-    }
-  }
-
-  private void registerClasses() {
     // Register mote types.
-    moteTypeClasses = new ArrayList<>();
+    moteTypeClasses.clear();
     registerMoteType(ImportAppMoteType.class);
     registerMoteType(DisturberMoteType.class);
     registerMoteType(ContikiMoteType.class);
     registerMoteType(SkyMoteType.class);
     registerMoteType(Z1MoteType.class);
-    var moteTypeClassNames = projectConfig.getStringArrayValue(Cooja.class,"MOTETYPES");
-    if (moteTypeClassNames != null) {
-      for (var moteTypeClassName : moteTypeClassNames) {
-        if (moteTypeClassName.trim().isEmpty()) {
-          continue;
-        }
-        var moteTypeClass = tryLoadClass(this, MoteType.class, moteTypeClassName);
-        if (moteTypeClass != null) {
-          registerMoteType(moteTypeClass);
-        } else {
-          logger.error("Could not load mote type class: " + moteTypeClassName);
-        }
+    for (var moteTypeClassName : projectConfig.getStringArrayValue(Cooja.class, "MOTETYPES")) {
+      var moteTypeClass = tryLoadClass(this, MoteType.class, moteTypeClassName);
+      if (moteTypeClass != null) {
+        registerMoteType(moteTypeClass);
+      } else {
+        logger.error("Could not load mote type class: " + moteTypeClassName);
       }
     }
 
     // Register positioner classes.
-    positionerClasses = new ArrayList<>();
+    positionerClasses.clear();
     registerPositioner(RandomPositioner.class);
     registerPositioner(LinearPositioner.class);
     registerPositioner(EllipsePositioner.class);
     registerPositioner(ManualPositioner.class);
-    var positionerClassNames = projectConfig.getStringArrayValue(Cooja.class, "POSITIONERS");
-    if (positionerClassNames != null) {
-      for (var positionerClassName : positionerClassNames) {
-        var positionerClass = tryLoadClass(this, Positioner.class, positionerClassName);
-        if (positionerClass != null) {
-          registerPositioner(positionerClass);
-        } else {
-          logger.error("Could not load positioner class: " + positionerClassName);
-        }
+    for (var positionerClassName : projectConfig.getStringArrayValue(Cooja.class, "POSITIONERS")) {
+      var positionerClass = tryLoadClass(this, Positioner.class, positionerClassName);
+      if (positionerClass != null) {
+        registerPositioner(positionerClass);
+      } else {
+        logger.error("Could not load positioner class: " + positionerClassName);
       }
     }
   }
