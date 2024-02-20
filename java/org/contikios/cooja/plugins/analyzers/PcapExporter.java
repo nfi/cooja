@@ -7,7 +7,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class PcapExporter {
+public class PcapExporter {
   private static final Logger logger = LoggerFactory.getLogger(PcapExporter.class);
 
   DataOutputStream out;

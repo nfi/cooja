@@ -30,6 +30,8 @@ package org.contikios.cooja;
 import java.awt.Color;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -40,6 +42,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import javax.swing.JTextArea;
 import org.contikios.cooja.Cooja.PluginConstructionException;
 import org.contikios.cooja.Cooja.SimulationCreationException;
+import org.contikios.cooja.plugins.analyzers.PcapExporter;
 import org.contikios.cooja.util.EventTriggers;
 import org.contikios.cooja.util.EventTriggers.AddRemove;
 import org.jdom2.Element;
@@ -146,6 +149,7 @@ public final class Simulation {
   private final ArrayList<MoteRelation> moteRelations = new ArrayList<>();
   private final EventTriggers<AddRemove, MoteRelation> moteRelationsTriggers = new EventTriggers<>();
   private final SimConfig cfg;
+  private PcapExporter pcapExporter;
 
   private final TimeEvent delayEvent = new TimeEvent() {
     @Override
@@ -196,6 +200,39 @@ public final class Simulation {
     randomSeedGenerated = generateSeed;
     randomGenerator = new SafeRandom(seed, this);
     currentRadioMedium = ExtensionManager.createRadioMedium(cooja, this, radioMediumClass);
+    if (cfg.file != null) {
+      pcapExporter = new PcapExporter();
+      String pcapFile = cfg.file + ".pcap";
+      logger.warn("Logging PCAP to {}", pcapFile);
+      try {
+        pcapExporter.openPcap(new File(pcapFile));
+      } catch (IOException e) {
+        logger.error("Failed to open pcap file {}", pcapFile, e);
+        pcapExporter = null;
+      }
+    }
+    currentRadioMedium.getRadioTransmissionTriggers().addTrigger(this, (_, _) ->
+    {
+      RadioConnection conn = currentRadioMedium.getLastConnection();
+      if (conn == null) {
+        return;
+      }
+      RadioPacket packet = conn.getSource().getLastPacketTransmitted();
+      if (packet == null) {
+        return;
+      }
+      long startTime = conn.getStartTime();
+      byte[] data = packet instanceof ConvertedRadioPacket convertedPacket ? convertedPacket.getOriginalPacketData() : packet.getPacketData();
+      if (pcapExporter != null) {
+        try {
+          pcapExporter.exportPacketData(data, startTime);
+        } catch (IOException e) {
+          logger.error("failed to log pcap", e);
+        }
+      }
+
+    });
+
     maxMoteStartupDelay = Math.max(0, moteStartDelay);
     simulationThread = new Thread(() -> {
       boolean isAlive = true;
